@@ -154,7 +154,7 @@
                 );
             }
 
-        }
+        },
 
         mounted() {
                 this.loadingMessages = true
