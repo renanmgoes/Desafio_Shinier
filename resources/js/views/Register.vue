@@ -70,36 +70,91 @@
             },
             redirectToLogin() {
                 this.$router.push({name: 'login'})
+            },
+
+            async createUserOnCometChat(username) {
+                let url = `https://api-eu.cometchat.io/v2.0/users`;
+                let data = {
+                    uid: username,
+                    name: `${username} sample`,
+                    avatar: 'https://data-eu.cometchat.io/assets/images/avatars/captainamerica.png',
+                };
+
+                try {
+                    const userResponse = await fetch(url, {
+                        method: 'POST',
+                        headers: new Headers({
+                            appid: process.env.MIX_COMMETCHAT_APP_ID,
+                            apikey: process.env.MIX_COMMETCHAT_API_KEY,
+                            'Content-Type': 'application/json'
+                        }),
+                        body: JSON.stringify(data),
+                    });
+                    const userJson = await userResponse.json();
+
+                    console.log('New User', userJson);
+                    this.createAuthTokenAndSaveForUser(username);
+                    this.redirectToLogin();
+                } catch (error) {
+                    console.log('Error', error);
+                }
+            },
+
+            async createAuthTokenAndSaveForUser(uid) {
+                let url = `https://api-eu.cometchat.io/v2.0/users/${uid}/auth_tokens`;
+
+                try {
+                    const tokenResponse = await fetch(url, {
+                        method: 'POST',
+                        headers: new Headers({
+                            appid: process.env.MIX_COMMETCHAT_APP_ID,
+                            apikey: process.env.MIX_COMMETCHAT_API_KEY,
+                            'Content-Type': 'application/json'
+                        }),
+                    });
+                    const tokenJSON = await tokenResponse.json();
+                    this.addUserToAGroup(uid);
+                    this.sendTokenToServer(tokenJSON.data.authToken, tokenJSON.data.uid);
+                } catch (error) {
+                    console.log('Error Token', error);
+                }
+
+            },
+
+            async addUserToAGroup(uid) {
+                let url = `https://api-eu.cometchat.io/v2.0/groups/${process.env.MIX_COMMETCHAT_GUID}/members`;
+                let data = {
+                    "participants":[uid]
+                };
+
+                try {
+                    const groupResponse = await fetch(url, {
+                        method: 'POST',
+                        headers: new Headers({
+                            appid: process.env.MIX_COMMETCHAT_APP_ID,
+                            apikey: process.env.MIX_COMMETCHAT_API_KEY,
+                            'Content-Type': 'application/json'
+                        }),
+                        body: JSON.stringify(data),
+                    });
+                    const groupJson = await groupResponse.json();
+
+                    console.log('Added to group', groupJson);
+                } catch (error) {
+                    console.log('Error', error);
+                }
+            },
+
+            sendTokenToServer(token, uid) {
+                axios.post(`http://localhost:8000/api/update/token`, {token, uid})
+                    .then(response => {
+                        console.log("Token updated successfully", response);
+                    }).catch(error => {
+                    alert(error.response.data.message);
+                })
             }
+
         }
     };
 </script>
-
-async createUserOnCometChat(username) {
-    let url = `https://api-eu.cometchat.io/v2.0/users`;
-    let data = {
-        uid: username,
-        name: `${username} sample`,
-        avatar: 'https://data-eu.cometchat.io/assets/images/avatars/captainamerica.png',
-    };
-
-    try {
-        const userResponse = await fetch(url, {
-            method: 'POST',
-            headers: new Headers({
-                appid: process.env.MIX_COMMETCHAT_APP_ID,
-                apikey: process.env.MIX_COMMETCHAT_API_KEY,
-                'Content-Type': 'application/json'
-            }),
-            body: JSON.stringify(data),
-        });
-        const userJson = await userResponse.json();
-
-        console.log('New User', userJson);
-        this.createAuthTokenAndSaveForUser(username);
-        this.redirectToLogin();
-    } catch (error) {
-        console.log('Error', error);
-    }
-}
 
